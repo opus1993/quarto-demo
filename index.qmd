@@ -1,0 +1,738 @@
+---
+date: "`r as.Date(Sys.time())`"
+format:
+  revealjs:
+    scrollable: true
+    theme: [serif, theme/styles.scss]
+    slide-number: c/t
+    logo: "https://preview.thenewsmarket.com/Previews/CNHA/StillAssets/960x540/401004_v2.jpg"   
+    footer: "[https://github.com/opus1993/quarto-demo](https://github.com/opus1993/quarto-demo)"
+    code-copy: true
+    center-title-slide: false
+    include-in-header: heading-meta.html
+    code-link: true
+    code-overflow: wrap
+    highlight-style: a11y
+    height: 1080
+    width: 1920
+    link-external-newwindow: true
+execute: 
+  eval: true
+  echo: true
+editor_options: 
+  chunk_output_type: console
+---
+
+:::{.title-center}
+Quarto as reveal.js Slides
+:::
+
+:::{.center}
+R at its extensible best
+
+Credit to Jeremy Allen of R Studio for the original fork of this demonstration
+:::
+
+:::{.half-image}
+![](www/icons.png){fig-alt="icons for Quarto, gt, and gtExtras"}
+:::
+
+:::{.author}
+Jim Gruman<br>
+CNH Industrial<br>
+twitter: @jim_gruman
+:::
+
+
+# A demo of `Quarto`, `gt`, and `gtExtras`
+using `palmerpenguins` data  
+  
+<br>
+<br>
+
+. . .
+
+Quarto®
+: Quarto is an open-source scientific and technical publishing system built on Pandoc.  
+
+. . .
+
+gt
+: With the gt package, anyone can make wonderful-looking tables using the R programming language, and a cohesive set of table parts, such as the table header, stub, column labels and spanner column labels, table body, and the table footer.
+
+. . .
+
+gtExtras
+: The goal of gtExtras is to provide some additional helper functions to assist in creating beautiful tables with gt.  
+
+## Let's build a `gt` table
+before talking about making slides with Quarto
+
+```{r}
+#| message: false
+#| warning: false
+#| echo: true
+
+library(tidyverse)
+library(palmerpenguins)
+library(gt)
+library(gtExtras)
+
+# make a table of our data
+# but let's summarize by year, so first make a year column
+dat <- penguins %>%
+  dplyr::arrange(year) %>% 
+  mutate(year = as.factor(year)) %>% 
+  group_by(species, island, year) %>% # order here will influence table output
+  summarise(across(bill_length_mm:body_mass_g, ~ mean(., na.rm = TRUE))) %>%
+  select(species, island, year, everything()) %>% 
+  dplyr::arrange(species, island, year) %>% 
+  ungroup() # experiment with and without
+```
+
+## Build the table with gt, include some gtExtras functions for colors
+
+`gt`'s default is to produce an html table  
+Let's first group our data by penguin species
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|3"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt()
+
+```
+
+## Headers and spanners
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|5-8|9-12"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  )
+```
+
+## Formatting numbers
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|13-16"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  )
+```
+
+## Sources, footnotes, and references
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|17-19|20-26|27-30"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Very cold nights."
+  ) %>%
+  tab_source_note(
+    # hitting return to start new lines so the string will stay inside the PDF
+    # but it will be a continuous string when it renders as the footnote
+    source_note = md("Reference: Horst AM, Hill AP, Gorman KB (2020). 
+    palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package
+    version 0.1.0. https://allisonhorst.github.io/palmerpenguins/")
+  ) %>% 
+  tab_footnote(
+    footnote = "Only found on a single island.",
+    locations = cells_row_groups(groups = c("Chinstrap", "Gentoo"))
+  )
+```
+
+## `gtExtras` for heatmap-like colors
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|31-35"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Very cold nights."
+  ) %>%
+  tab_source_note(
+    # hitting return to start new lines so the string will stay inside the PDF
+    # but it will be a continuous string when it renders as the footnote
+    source_note = md("Reference: Horst AM, Hill AP, Gorman KB (2020). 
+    palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package
+    version 0.1.0. https://allisonhorst.github.io/palmerpenguins/")
+  ) %>% 
+  tab_footnote(
+    footnote = "Only found on a single island.",
+    locations = cells_row_groups(groups = c("Chinstrap", "Gentoo"))
+  ) %>%
+  # trim gives smaller range of colors
+  # so the green and purples are not as dark
+  gt_hulk_col_numeric(bill_length_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(bill_depth_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(flipper_length_mm, trim = TRUE)  # gtExtras!
+  
+```
+
+## Change column labels and row-group lables
+
+```{r}
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|36-43|44-46"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Very cold nights."
+  ) %>%
+  tab_source_note(
+    # hitting return to start new lines so the string will stay inside the PDF
+    # but it will be a continuous string when it renders as the footnote
+    source_note = md("Reference: Horst AM, Hill AP, Gorman KB (2020). 
+    palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package
+    version 0.1.0. https://allisonhorst.github.io/palmerpenguins/")
+  ) %>% 
+  tab_footnote(
+    footnote = "Only found on a single island.",
+    locations = cells_row_groups(groups = c("Chinstrap", "Gentoo"))
+  ) %>%
+  # trim gives smaller range of colors
+  # so the green and purples are not as dark
+  gt_hulk_col_numeric(bill_length_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(bill_depth_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(flipper_length_mm, trim = TRUE) %>%  # gtExtras!
+  cols_label( # new column labels!
+    bill_length_mm = html("Bill Length<br>mm"),
+    bill_depth_mm = html("Bill Depth<br>mm"),
+    flipper_length_mm = html("Flipper Length<br>mm"),
+    body_mass_g = html("Body Mass<br>g"),
+    island = "Island",
+    year = "Year"
+  ) %>% 
+  tab_options(
+    row_group.font.weight = "800"
+  )
+```
+
+## Final table
+what else changed?
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Very cold nights."
+  ) %>%
+  tab_source_note(
+    # hitting return to start new lines so the string will stay inside the PDF
+    # but it will be a continuous string when it renders as the footnote
+    source_note = md("Reference: Horst AM, Hill AP, Gorman KB (2020). 
+    palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package
+    version 0.1.0. https://allisonhorst.github.io/palmerpenguins/")
+  ) %>% 
+  tab_footnote(
+    footnote = "Only found on a single island.",
+    locations = cells_row_groups(groups = c("Chinstrap", "Gentoo"))
+  ) %>%
+  # trim gives smaller range of colors
+  # so the green and purples are not as dark
+  gt_hulk_col_numeric(bill_length_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(bill_depth_mm, trim = TRUE) %>%  # gtExtras!
+  gt_hulk_col_numeric(flipper_length_mm, trim = TRUE) %>%  # gtExtras!
+  cols_label( # new column labels!
+    bill_length_mm = html("Bill Length<br>mm"),
+    bill_depth_mm = html("Bill Depth<br>mm"),
+    flipper_length_mm = html("Flipper Length<br>mm"),
+    body_mass_g = html("Body Mass<br>g"),
+    island = "Island",
+    year = "Year"
+  ) %>% 
+  tab_options(
+    heading.align = "left",
+    row_group.font.weight = "800",
+    table.background.color = "#f0f1eb"
+  )
+```
+
+## Other R Packages that Make Tables
+
+Not all packages support all output formats
+
+:::: {.columns}
+
+::: {.column width="60%"}
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+path_figure <- list(
+  "img/icons8-smiling-100.png",
+  "img/icons8-neutral-100.png",
+  "img/icons8-disappointed-100.png",
+  "img/icons8-no-entry-100.png",
+  "img/icons8-under-construction-100.png",
+  "img/icons8-camera-100.png"
+)
+list(
+  printer = c(
+    "tibble", "kable", "kableExtra", "gt", "flextable", "huxtable", "dt", "reactable"
+  ),
+  output = c("HTML", "PDF", "RTF", "Word")
+) %>%
+  purrr::cross_df() %>%
+  dplyr::mutate(
+    rating = dplyr::case_when(
+      printer == "gt" & output %in% c("HTML","PDF") ~ 1, # good output
+      printer == "gt" & output == "RTF" ~ 5, # under construction
+      printer == "gt" & output == "Word" ~ 4, # not supported
+      printer == "kable" ~ 2, # okay output
+      printer == "flextable" & output != "RTF" ~ 1, # good output
+      printer == "flextable" & output == "RTF" ~ 4, # not supported
+      printer == "kableExtra" & output %in% c("PDF", "HTML") ~ 1, # good output
+      printer == "kableExtra" & output %in% c("RTF", "Word") ~ 4, # not supported
+      printer == "huxtable" ~ 1, # good output
+      printer == "tibble" ~ 3, # not great
+      printer == "reactable" & output == "HTML" ~ 1, # good output
+      printer == "reactable" & output %in% c("RTF", "Word") ~ 4, # not supported
+      printer == "reactable" & output == "PDF" ~ 6, # picture
+      printer == "dt" & output == "HTML" ~ 1, # good output
+      printer == "dt" & output == "PDF" ~ 6, # picture
+      printer == "dt" & output %in% c("RTF", "Word") ~ 4, # not supported
+    ) %>%
+      factor()
+  ) %>%
+  tidyr::pivot_wider(id_cols = printer, names_from = output, values_from = rating) %>%
+  dplyr::mutate(
+    link = dplyr::case_when(
+      printer == "gt" ~
+        "[gt](https://gt.rstudio.com/index.html)",
+      printer == "kable" ~
+        "[kable](https://bookdown.org/yihui/rmarkdown-cookbook/kable.html)",
+      printer == "flextable" ~
+        "[flextable](https://davidgohel.github.io/flextable/articles/overview.html)",
+      printer == "kableExtra" ~
+        "[kableExtra](http://haozhu233.github.io/kableExtra/)",
+      printer == "huxtable" ~
+        "[huxtable](https://hughjonesd.github.io/huxtable/)",
+      printer == "tibble" ~
+        "[tibble](https://tibble.tidyverse.org/)",
+      printer == "reactable" ~
+        "[reactable](https://glin.github.io/reactable/index.html)",
+      printer == "dt" ~
+        "[DT](https://rstudio.github.io/DT/)"
+    ),
+    fns = dplyr::case_when(
+      printer == "gt" ~ "`gt()`",
+      printer == "kable" ~ "`kable()`",
+      printer == "flextable" ~ "`flextable()`",
+      printer == "kableExtra" ~ "`kbl() + stuff`",
+      printer == "huxtable" ~ "`huxtable()`",
+      printer == "tibble" ~ "`tibble()`",
+      printer == "reactable" ~ "`reactable()`",
+      printer == "dt" ~ "`datatable()`",
+    )
+  ) %>%
+  gt() %>%
+  cols_move_to_start(columns = c(link, fns)) %>%
+  cols_hide(columns = c(printer)) %>%
+  cols_label(
+    link = md("**Print Engine**"),
+    fns = md("**Function**"),
+    HTML = md("**HTML**"), PDF = md("**PDF**"),
+    RTF = md("**RTF**"), Word = md("**Word**")
+  ) %>%
+  fmt_markdown(columns = c(fns, link)) %>%
+  data_color(
+    columns = c(HTML, PDF, RTF, Word),
+    colors = scales::col_factor(
+      palette = c(
+        "#D1B3F9", "#bae1ff", "#ffb3ba", "#ffdfba", "#ffffba", "#baffc9"
+      ),
+      domain = NULL,
+      reverse = TRUE
+    ),
+    alpha = 0.8
+  ) %>%
+  text_transform(
+    locations = cells_body(columns = c(HTML, PDF, RTF, Word)),
+    fn = function(x) {
+      dplyr::case_when(
+        x == 1 ~ local_image(filename = path_figure[[1]]),
+        x == 2 ~ local_image(filename = path_figure[[2]]),
+        x == 3 ~ local_image(filename = path_figure[[3]]),
+        x == 4 ~ local_image(filename = path_figure[[4]]),
+        x == 5 ~ local_image(filename = path_figure[[5]]),
+        x == 6 ~ local_image(filename = path_figure[[6]])
+      )
+    }
+  ) %>%
+  cols_width(
+    c(HTML, PDF, RTF, Word) ~ px(80),
+    c(link) ~ px(110),
+    c(link, fns) ~ px(200)
+  )
+```
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+tibble::tibble(
+  figure = 1:6,
+  desc = c(
+    "Output fully supported",
+    "Formatted output, but missing indentation, footnotes, spanning headers",
+    "No formatted output",
+    "Output not supported",
+    "Under development",
+    "Image of first page with controls"
+  )
+) %>%
+  gt() %>%
+  cols_label(figure = md("**Key**"), desc = "") %>%
+  data_color(
+    columns = c(figure),
+    colors = scales::col_factor(
+      palette = c(
+        "#D1B3F9", "#bae1ff", "#ffb3ba", "#ffdfba", "#ffffba", "#baffc9"
+      ),
+      domain = NULL,
+      reverse = TRUE
+    ),
+    alpha = 0.8
+  ) %>%
+  text_transform(
+    locations = cells_body(columns = c(figure)),
+    fn = function(x) {
+      dplyr::case_when(
+        x == 1 ~ local_image(filename = path_figure[[1]], height = 20),
+        x == 2 ~ local_image(filename = path_figure[[2]], height = 20),
+        x == 3 ~ local_image(filename = path_figure[[3]], height = 20),
+        x == 4 ~ local_image(filename = path_figure[[4]], height = 20),
+        x == 5 ~ local_image(filename = path_figure[[5]], height = 20),
+        x == 6 ~ local_image(filename = path_figure[[6]], height = 20),
+      )
+    }
+  ) %>%
+  tab_options(table.font.size = "small", data_row.padding = px(3))
+```
+:::
+
+::::
+
+::: aside
+
+Thanks to Daniel D. Sjoberg for the table code and Raymond Balise for the useR2022 [presentation](https://github.com/RaymondBalise/useR2022_table_public)
+
+:::
+
+## Now here's a little about quarto
+
+The YAML for this presentation
+
+```{YAML}
+---
+date: "`r as.Date(Sys.time())`"
+format:
+  revealjs:
+    scrollable: true
+    theme: [serif, theme/styles.scss]
+    slide-number: c/t
+    logo: "https://www.rstudio.com/wp-content/uploads/2018/10/RStudio-Logo-Flat.png"
+    footer: "[https://github.com/jeremy-allen/quarto-demo](https://github.com/jeremy-allen/quarto-demo)"
+    code-copy: true
+    center-title-slide: false
+    include-in-header: heading-meta.html
+    code-link: true
+    code-overflow: wrap
+    highlight-style: a11y
+    height: 1080
+    width: 1920
+    link-external-newwindow: true
+execute: 
+  eval: true
+  echo: true
+editor_options: 
+  chunk_output_type: console
+---
+```
+
+<br>
+
+I excluded title and author because I wanted to make my own title slide
+
+## My title slide code
+
+:::: {.columns}
+
+::: {.column width="60%"}
+markdown that creates html divs and specifies css classes
+
+```{text}
+
+:::{.title-center}
+Quarto as reveal.js slides
+:::
+
+:::{.half-image}
+![](www/icons.png){fig-alt="icons for Quarto, gt, and gtExtras"}
+:::
+
+:::{.author}
+Jim Gruman<br>
+CNH Industrial<br>
+twitter: @jim_gruman
+:::
+
+```
+:::
+
+::: {.column width="40%"}
+In my css file I have these classes defined
+
+```{text}
+
+.title-center {
+  font-size: 2.75em;
+  text-align: center;
+  margin: auto;
+}
+
+.half-image {
+  width: 50%;
+  margin: auto;
+}
+
+.author {
+  font-size: 1.25em;
+  font-weight: 400;
+  text-align: left;
+  position: absolute;
+  left: 30px;
+  bottom: 30px;
+}
+
+```
+:::
+<br>
+<br>
+But how did I make this [two-column slide?](https://quarto.org/docs/presentations/index.html#multiple-columns)
+::::
+
+
+
+## How slide 2 was made with animated text and definitions
+To make text appear on-click, not all at once, separate text with three dots, space between each dot
+
+```{text}
+
+# A demo of `Quarto`, `gt`, and `gtExtras`
+using `palmerpenguins` data  
+  
+<br>
+<br>
+
+. . .
+
+Quarto®
+: Quarto is an open-source scientific and technical publishing system built on Pandoc.  
+
+. . .
+
+gt
+: With the gt package, anyone can make wonderful-looking tables using the R programming language, and a cohesive set of table parts, such as the table header, stub, column labels and spanner column labels, table body, and the table footer.
+
+. . .
+
+gtExtras
+: The goal of gtExtras is to provide some additional helper functions to assist in creating beautiful tables with gt.  
+
+```
+
+The markdown convention below, shows the word in bold and offsets the definition below
+(not unique to slides)
+
+```{text}
+
+word
+: definition goes here  
+
+```
+
+## How code and ouput slides were made
+
+| Inside an r code chunk, the usual knitr chunk options are used first
+| `output-location: column` is used to split code and output into columns
+| `code-line-numbers: "|17-19|20-26|27-30"` steps through code highlights on click
+
+```{text}
+
+#| echo: true
+#| message: false
+#| warning: false
+#| output-location: column
+#| code-line-numbers: "|17-19|20-26|27-30"
+
+# table using gt package
+dat %>% 
+  dplyr::group_by(species) %>% # add a grouping variable and drop stub info
+  gt() %>% 
+  tab_header(
+    title = md("**Penguin Anatomical Changes**"), #wrapped in md() for markdown
+    subtitle = "By species, island, and year from 2007-2009"
+  ) %>%
+  tab_spanner( # tab spanner!
+    label = "mean anatomical measures",
+    columns = c(bill_length_mm:body_mass_g)
+  ) %>% 
+  fmt_number(
+    columns = bill_length_mm:body_mass_g,
+    decimals = 1
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Very cold nights."
+  ) %>%
+  tab_source_note(
+    # hitting return to start new lines so the string will stay inside the PDF
+    # but it will be a continuous string when it renders as the footnote
+    source_note = md("Reference: Horst AM, Hill AP, Gorman KB (2020). 
+    palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package
+    version 0.1.0. https://allisonhorst.github.io/palmerpenguins/")
+  ) %>% 
+  tab_footnote(
+    footnote = "Only found on a single island.",
+    locations = cells_row_groups(groups = c("Chinstrap", "Gentoo"))
+  )
+  
+```
+
+# Your turn! To get started:
+
+- [quarto.org](https://quarto.org/)  
+- [gt](https://gt.rstudio.com/index.html)  
+- [gtExtras](https://jthomasmock.github.io/gtExtras/) 
+- [palmerpenguins](https://allisonhorst.github.io/palmerpenguins/)
+
+
+<br>
+code at <https://github.com/opus1993/quarto-demo>
+
+:::{.author}
+Jim Gruman<br>
+CNH Industrial<br>
+twitter: @jim_gruman
+:::
